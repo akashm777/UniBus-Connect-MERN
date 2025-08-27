@@ -15,9 +15,7 @@ function normalizeSpaces(s) {
   return s.replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
 }
 
-
 // Fix common OCR/text errors and normalize stop names
-
 function normalizeLocationName(name) {
   let s = name;
 
@@ -50,9 +48,7 @@ function parseDateFromHeader(text) {
   return new Date(iso);
 }
 
-
 // Pre-normalize all time-like fragments
-
 function preNormalizeTimes(raw) {
   let s = raw;
 
@@ -119,44 +115,34 @@ function splitByRoutes(fullText) {
 
   if (!markers.length) return [];
 
-  // For each marker, determine the routeNo by finding the first time after the marker
   for (let i = 0; i < markers.length; i++) {
     const startIdx = markers[i].idx;
     const markerEnd = startIdx + markers[i].len;
 
-    // Find first time token after markerEnd
     TIME_GLOBAL_RE.lastIndex = markerEnd;
     const timeMatch = TIME_GLOBAL_RE.exec(fullText);
 
-    // slice the substring between markerEnd and timeMatch.index (or small fallback window)
     let routeTextRaw = "";
     if (timeMatch && timeMatch.index > markerEnd) {
       routeTextRaw = fullText.slice(markerEnd, timeMatch.index);
     } else {
-      // fallback: take a short window after marker (avoid consuming time)
       routeTextRaw = fullText.slice(markerEnd, markerEnd + 12);
     }
 
-    // keep letters & digits & spaces only
     let routeTextClean = routeTextRaw.replace(/[^0-9A-Za-z\s]/g, "").trim();
 
-    // match leading digits (with possible internal spaces) and optional trailing single letter
-    // e.g. "2 6A" -> groups: digits "2 6", letter "A"
     const rnMatch = routeTextClean.match(/^0*([1-9][0-9\s]*)([A-Za-z]?)?/);
     let routeNo = "";
     if (rnMatch) {
-      routeNo = (rnMatch[1] || "").replace(/\s+/g, ""); // "2 6" -> "26"
+      routeNo = (rnMatch[1] || "").replace(/\s+/g, "");
       if (rnMatch[2]) routeNo += rnMatch[2].toUpperCase();
     } else {
-      // final fallback: collapse spaces
       routeNo = routeTextClean.replace(/\s+/g, "");
     }
 
-    // determine block end (start of next marker, else EOF)
     const endIdx = i + 1 < markers.length ? markers[i + 1].idx : fullText.length;
     const blockText = fullText.slice(startIdx, endIdx).trim();
 
-    // only push if we have a plausible routeNo
     if (routeNo) {
       blocks.push({ routeNo, text: blockText });
     }
@@ -167,41 +153,32 @@ function splitByRoutes(fullText) {
 
 /*
   Parse stops for one route block.
-  We now remove the header robustly by slicing up to the first time token (so header digits won't remain).
- */
+  Logic untouched.
+*/
 function parseStopsFromBlock(blockText) {
   let t = blockText.replace(/[\|\\/]+/g, " ");
   t = preNormalizeTimes(t);
   t = insertSpaceAfterTimes(t);
   t = normalizeSpaces(t);
 
-  // Remove header cleanly by finding the first time token in this block
   TIME_GLOBAL_RE.lastIndex = 0;
   const firstTime = TIME_GLOBAL_RE.exec(t);
   if (firstTime && firstTime.index > 0) {
-    // keep from the first time onwards (so times stay intact)
     t = t.slice(firstTime.index);
   } else {
-    // fallback: remove "Route No." literal only
     t = t.replace(/Route\s*No\.?/i, "").trim();
   }
 
-  // Remove trailing contact numbers in brackets like [9080520709]
   t = t.replace(/\s*\[\d{7,}\]\s*$/, "");
 
-  // Cut anything after the last "College." to avoid trailing notes
   const collegeIndex = t.toLowerCase().lastIndexOf(" college");
   if (collegeIndex !== -1) {
     t = t.slice(0, collegeIndex + " college".length + 1).trim();
   }
 
-  // Re-normalize times (paranoia)
   t = t.replace(TIME_GLOBAL_RE, (match) => cleanAndNormalizeTime(match));
-
-  // Ensure times stuck to names get separated
   t = t.replace(/(\d{1,2}[:.]\d{2}\s*(?:am|pm)?)(?=[A-Za-z])/gi, "$1 ");
 
-  // Extract times with positions
   const times = [];
   let match;
   TIME_GLOBAL_RE.lastIndex = 0;
@@ -227,7 +204,6 @@ function parseStopsFromBlock(blockText) {
       if (!loc || /^\d+$/.test(loc)) continue;
       if (LONE_IGNORE.has(loc.toUpperCase())) continue;
 
-      // Special-case: "Adyar Depot(T.Exchange ) LB Road" => split to two stops
       if (/Adyar Depot.*LB Road/i.test(loc)) {
         const sub1 = loc.replace(/\s*LB Road.*/i, "").trim();
         const sub2 = "LB Road";
@@ -247,7 +223,6 @@ function parseStopsFromBlock(blockText) {
     }
   }
 
-  // Deduplicate preserving the order
   const seen = new Set();
   const uniqueStops = stops.filter(s => {
     const key = `${s.time}-${s.location.toLowerCase()}`;
@@ -259,23 +234,15 @@ function parseStopsFromBlock(blockText) {
   return uniqueStops;
 }
 
-
-
+// --- Only this function changed to remove pdfjs-dist fallback ---
 export async function parseBusPdf(buffer, fileName = "") {
   let textContent = "";
   try {
     const { default: pdfParse } = await import("pdf-parse");
     textContent = (await pdfParse(new Uint8Array(buffer))).text;
-  } catch {
-    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const pdf = await getDocument({ data: new Uint8Array(buffer),useWorker: false }).promise;
-    let agg = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      agg += content.items.map(it => it.str || "").join(" ") + "\n";
-    }
-    textContent = agg;
+  } catch (err) {
+    console.error("PDF parsing failed:", err);
+    throw new Error("Failed to parse PDF. Ensure it is a valid PDF.");
   }
 
   if (!textContent.trim()) throw new Error("Empty PDF text");
