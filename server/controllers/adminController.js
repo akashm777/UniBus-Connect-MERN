@@ -1,4 +1,3 @@
-import fs from "fs";
 import BusRoute from "../models/BusRoute.js";
 import { parseBusPdf, saveParsedRoutesToDb, extractLocations } from "../utils/pdfParser.js";
 
@@ -13,10 +12,9 @@ const RECENT_UPLOADS = [];
 export const uploadPdf = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "PDF file is required" });
 
-  const filePath = req.file.path;
-
   try {
-    const buffer = fs.readFileSync(filePath);
+    // Use buffer directly from multer memory storage
+    const buffer = req.file.buffer;
     const routes = await parseBusPdf(buffer, req.file.originalname || "");
 
     // Save all routes (upsert by routeNo + date)
@@ -36,11 +34,6 @@ export const uploadPdf = async (req, res) => {
     });
     if (RECENT_UPLOADS.length > 20) RECENT_UPLOADS.length = 20;
 
-    // Clean up uploaded file
-    fs.unlink(filePath, (err) => {
-      if (err) console.warn("Failed to delete uploaded file:", err.message);
-    });
-
     res.json({
       message: "Uploaded and parsed successfully",
       totalRoutes: routes.length,
@@ -49,19 +42,11 @@ export const uploadPdf = async (req, res) => {
     });
   } catch (err) {
     console.error("Error parsing PDF:", err);
-
-    // Clean up on error
-    fs.unlink(filePath, (e) => {
-      if (e) console.warn("Failed to delete uploaded file:", e.message);
-    });
-
     res.status(400).json({ message: "Failed to parse PDF", error: err.message });
   }
 };
 
-
 // List recently uploaded routes (latest 20 by date)
-
 export const listUploads = async (req, res) => {
   try {
     res.json(RECENT_UPLOADS);
@@ -75,7 +60,6 @@ export const listUploads = async (req, res) => {
   Get all unique locations for dropdown
   (scans stops from all routes in DB)
  */
-
 export const getLocations = async (req, res) => {
   try {
     const routes = await BusRoute.find({}, { stops: 1 });
@@ -91,9 +75,7 @@ export const getLocations = async (req, res) => {
   }
 };
 
-
 // Get all routes serving a given location
-
 export const getRoutesByLocation = async (req, res) => {
   try {
     const { location } = req.params;

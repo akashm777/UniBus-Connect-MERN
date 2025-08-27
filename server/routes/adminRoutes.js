@@ -1,25 +1,17 @@
 import express from "express";
 import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
 import { adminOnly, protect } from "../middleware/authMiddleware.js";
 import { uploadPdf, listUploads, getLocations, getRoutesByLocation } from "../controllers/adminController.js";
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, "../uploads")),
-  filename: (req, file, cb) =>
-    cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, "_")}`)
-});
+// Use memory storage instead of disk storage
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const isPdf =
     file.mimetype === "application/pdf" ||
-    path.extname(file.originalname).toLowerCase() === ".pdf";
+    file.originalname.toLowerCase().endsWith(".pdf");
 
   if (isPdf) cb(null, true);
   else cb(new Error("Only PDF files are allowed"), false);
