@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 const AdminUpload = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0); // force re-render of list after success
 
   const handleUpload = async (e) => {
     e?.preventDefault();
@@ -17,13 +17,14 @@ const AdminUpload = () => {
 
     try {
       setLoading(true);
-      await uploadRoutePdf(file);
+      await uploadRoutePdf(file); // <- sends file to your backend /api/admin/upload
       toast.success("PDF uploaded and parsed successfully!");
       setFile(null);
       setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error(err);
-      toast.error(err?.response?.data?.message || "Upload failed.");
+      const msg = err?.response?.data?.message || "Upload failed.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -39,7 +40,7 @@ const AdminUpload = () => {
             <input
               type="file"
               accept="application/pdf"
-              onChange={(e) => setFile(e.target.files[0])}
+              onChange={(e) => setFile(e.target.files[0] || null)}
               className="mb-2"
             />
             <button
@@ -57,6 +58,7 @@ const AdminUpload = () => {
           </form>
         </div>
 
+        {/* Recent uploads list */}
         <RecentUploads key={refreshKey} />
       </div>
     </div>

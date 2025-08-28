@@ -1,13 +1,29 @@
 import express from "express";
 import multer from "multer";
 import { adminOnly, protect } from "../middleware/authMiddleware.js";
-import { uploadPdf, listUploads, getLocations, getRoutesByLocation } from "../controllers/adminController.js";
+import {
+  uploadPdf,
+  listUploads,
+  getLocations,
+  getRoutesByLocation,
+} from "../controllers/adminController.js";
 
 const router = express.Router();
 
-// Multer memory storage
+/**
+ * Multer in-memory storage (serverless-friendly)
+ * - Restrict to PDFs
+ * - Friendly size limit (adjust if needed)
+ */
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") return cb(null, true);
+    cb(new Error("Only PDF files are allowed"));
+  },
+});
 
 // Routes
 router.post("/upload", protect, adminOnly, upload.single("file"), uploadPdf);
