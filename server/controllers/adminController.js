@@ -1,21 +1,30 @@
 import axios from "axios";
 import BusRoute from "../models/BusRoute.js";
+import imagekit from "../config/imagekit.js";
 import { parseBusPdf, saveParsedRoutesToDb, extractLocations } from "../utils/pdfParser.js";
 
 const RECENT_UPLOADS = [];
 
 export const uploadPdf = async (req, res) => {
-  const { pdfUrl } = req.body;
+  const file = req.file;
 
-  if (!pdfUrl) return res.status(400).json({ message: "PDF URL is required" });
+  if (!file) return res.status(400).json({ message: "PDF file is required" });
 
   try {
+    // Upload PDF to ImageKit
+    const uploadResponse = await imagekit.upload({
+      file: file.buffer,
+      fileName: file.originalname
+    });
+
+    const pdfUrl = uploadResponse.url;
+
     // Fetch PDF from ImageKit
     const response = await axios.get(pdfUrl, { responseType: "arraybuffer" });
     const buffer = Buffer.from(response.data);
 
     // Parse PDF
-    const routes = await parseBusPdf(buffer, "uploaded.pdf");
+    const routes = await parseBusPdf(buffer, file.originalname);
 
     // Save routes in DB
     const result = await saveParsedRoutesToDb(BusRoute, routes);
@@ -23,10 +32,10 @@ export const uploadPdf = async (req, res) => {
     // Extract unique locations
     const locations = extractLocations(routes);
 
-    // Update in-memory uploads (max 20)
+    // Update in-memory uploads
     RECENT_UPLOADS.unshift({
       id: Date.now().toString(),
-      fileName: "uploaded.pdf",
+      fileName: file.originalname,
       size: buffer.length,
       uploadedAt: new Date().toISOString(),
       routesParsed: routes.length,
@@ -38,7 +47,7 @@ export const uploadPdf = async (req, res) => {
       message: "Uploaded and parsed successfully",
       totalRoutes: routes.length,
       locationsExtracted: locations.length,
-      mongoResult: result,
+      mongoResult: result
     });
   } catch (err) {
     console.error("Error uploading/parsing PDF:", err);

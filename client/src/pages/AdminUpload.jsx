@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { uploadRoutePdf } from "../api/adminApi";
 import RecentUploads from "../components/RecentUploads";
 import toast from "react-hot-toast";
-axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
 const AdminUpload = () => {
   const [file, setFile] = useState(null);
@@ -10,7 +9,7 @@ const AdminUpload = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleUpload = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!file) {
       toast.error("Please select a PDF file");
       return;
@@ -18,39 +17,13 @@ const AdminUpload = () => {
 
     try {
       setLoading(true);
-
-      // 1️⃣ Upload to ImageKit
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("fileName", file.name);
-
-      const imagekitRes = await axios.post(
-        "https://upload.imagekit.io/api/v1/files/upload",
-        formData,
-        {
-          headers: {
-            Authorization: `Basic ${btoa(`${import.meta.env.IMAGEKIT_PUBLIC_KEY}:${import.meta.env.IMAGEKIT_PRIVATE_KEY}`)}`,
-          },
-        }
-      );
-
-      const pdfUrl = imagekitRes.data.url;
-
-      // 2️⃣ Send URL to backend
-      await axios.post(
-        `/api/admin/upload`,
-        { pdfUrl },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-
+      await uploadRoutePdf(file);
       toast.success("PDF uploaded and parsed successfully!");
       setFile(null);
-      setRefreshKey((k) => k + 1); // refresh list
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error(err);
-      toast.error(err?.response?.data?.message || "Upload failed");
+      toast.error(err?.response?.data?.message || "Upload failed.");
     } finally {
       setLoading(false);
     }
