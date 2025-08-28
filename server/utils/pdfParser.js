@@ -1,14 +1,14 @@
-// --- Robust time patterns that tolerate internal spaces like "6 .38 am" / "7. 40am" / "6.5 0 am"
-const TIME_CORE = String.raw`(?:[01]?\d|2[0-3])\s*[.:]\s*(?:\d\s*\d|\d{1,2})`;  // hh[:.]mm (mm may have a space like "5 0")
+// Robust time patterns
+const TIME_CORE = String.raw`(?:[01]?\d|2[0-3])\s*[.:]\s*(?:\d\s*\d|\d{1,2})`;  
 const TIME_HH_AMPM = String.raw`(?:[1-9]|1[0-2])\s*(?:am|pm)`;
 
 const TIME_RE = new RegExp(`(?:${TIME_CORE}\\s*(?:am|pm)?|${TIME_HH_AMPM})`, "i");
 const TIME_GLOBAL_RE = new RegExp(`(?:${TIME_CORE}\\s*(?:am|pm)?|${TIME_HH_AMPM})`, "gi");
 
-// Simple marker to find route headers (we'll extract the number using the next time token)
+// Simple marker to find route headers 
 const ROUTE_MARKER_RE = /Route\s*No\.?/gi;
 
-// Ignore tokens when they are lone "stops" (keep if part of a larger name)
+// Ignore tokens when they are lone "stops" 
 const LONE_IGNORE = new Set(["ECR", "OMR"]);
 
 function normalizeSpaces(s) {
@@ -37,11 +37,8 @@ function normalizeLocationName(name) {
   return normalizeSpaces(s);
 }
 
-/*
-  Extracts date from header line like:
-  "BUS ROUTES ON dd-mm-yyyy"  or
-  "BUS ROUTES FROM dd-mm-yyyy"
- */
+
+//  Extracts date from header line
 function parseDateFromHeader(text) {
   const m = text.match(/BUS\s*ROUTES\s*(?:ON|FROM)\s*([0-3]?\d)[-\/. ]([0-1]?\d)[-\/. ](20\d{2})/i);
   if (!m) return null;
@@ -103,11 +100,8 @@ function insertSpaceAfterTimes(s) {
   );
 }
 
-/*
-  Split whole document into route blocks using Route No. markers.
-  Robust extraction of the route number: look for the first time token after the marker
-  and take the substring in-between as the route-number text (strip spaces/leading zeros).
- */
+
+//  Split whole document into route blocks using Route No. markers.
 function splitByRoutes(fullText) {
   const blocks = [];
   const markers = [];
@@ -128,31 +122,26 @@ function splitByRoutes(fullText) {
     TIME_GLOBAL_RE.lastIndex = markerEnd;
     const timeMatch = TIME_GLOBAL_RE.exec(fullText);
 
-    // slice the substring between markerEnd and timeMatch.index (or small fallback window)
     let routeTextRaw = "";
     if (timeMatch && timeMatch.index > markerEnd) {
       routeTextRaw = fullText.slice(markerEnd, timeMatch.index);
     } else {
-      // fallback: take a short window after marker (avoid consuming time)
       routeTextRaw = fullText.slice(markerEnd, markerEnd + 12);
     }
 
     // keep letters & digits & spaces only
     let routeTextClean = routeTextRaw.replace(/[^0-9A-Za-z\s]/g, "").trim();
 
-    // match leading digits (with possible internal spaces) and optional trailing single letter
-    // e.g. "2 6A" -> groups: digits "2 6", letter "A"
     const rnMatch = routeTextClean.match(/^0*([1-9][0-9\s]*)([A-Za-z]?)?/);
     let routeNo = "";
     if (rnMatch) {
       routeNo = (rnMatch[1] || "").replace(/\s+/g, ""); // "2 6" -> "26"
       if (rnMatch[2]) routeNo += rnMatch[2].toUpperCase();
     } else {
-      // final fallback: collapse spaces
       routeNo = routeTextClean.replace(/\s+/g, "");
     }
 
-    // determine block end (start of next marker, else EOF)
+    // determine block end
     const endIdx = i + 1 < markers.length ? markers[i + 1].idx : fullText.length;
     const blockText = fullText.slice(startIdx, endIdx).trim();
 
@@ -179,7 +168,7 @@ function parseStopsFromBlock(blockText) {
   TIME_GLOBAL_RE.lastIndex = 0;
   const firstTime = TIME_GLOBAL_RE.exec(t);
   if (firstTime && firstTime.index > 0) {
-    // keep from the first time onwards (so times stay intact)
+    // keep from the first time onwards
     t = t.slice(firstTime.index);
   } else {
     // fallback: remove "Route No." literal only
@@ -227,7 +216,6 @@ function parseStopsFromBlock(blockText) {
       if (!loc || /^\d+$/.test(loc)) continue;
       if (LONE_IGNORE.has(loc.toUpperCase())) continue;
 
-      // Special-case: "Adyar Depot(T.Exchange ) LB Road" => split to two stops
       if (/Adyar Depot.*LB Road/i.test(loc)) {
         const sub1 = loc.replace(/\s*LB Road.*/i, "").trim();
         const sub2 = "LB Road";
@@ -262,9 +250,8 @@ function parseStopsFromBlock(blockText) {
 
 
 export async function parseBusPdf(buffer, fileName = "") {
-  // Import the internal implementation directly to avoid index.js sample file logic
   const mod = await import("pdf-parse/lib/pdf-parse.js");
-  const pdfParse = mod.default || mod; // support both ESM default and CJS
+  const pdfParse = mod.default || mod; 
   const data = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
   const result = await pdfParse(data);
   const textContent = result.text;

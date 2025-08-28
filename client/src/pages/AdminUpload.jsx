@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 const AdminUpload = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // force re-render of list after success
+  const [refreshKey, setRefreshKey] = useState(0); 
 
   const handleUpload = async (e) => {
     e?.preventDefault();
@@ -17,7 +17,7 @@ const AdminUpload = () => {
 
     try {
       setLoading(true);
-      await uploadRoutePdf(file); // <- sends file to your backend /api/admin/upload
+      await uploadRoutePdf(file); 
       toast.success("PDF uploaded and parsed successfully!");
       setFile(null);
       setRefreshKey((k) => k + 1);

@@ -5,13 +5,6 @@ import { parseBusPdf, saveParsedRoutesToDb, extractLocations } from "../utils/pd
 // Simple in-memory array for recent uploads
 const RECENT_UPLOADS = [];
 
-/*
-  Admin upload of a bus route PDF (secure backend flow)
-  1) Receives PDF via multer memory storage (req.file)
-  2) Uploads file to ImageKit using PRIVATE KEY (server-side only)
-  3) Parses PDF DIRECTLY from memory buffer (no extra network hop)
-  4) Saves routes in DB
-*/
 export const uploadPdf = async (req, res) => {
   const file = req.file;
 
@@ -20,16 +13,13 @@ export const uploadPdf = async (req, res) => {
   }
 
   try {
-    // 1) Upload PDF to ImageKit (server-side, private key never exposed)
     const uploadResponse = await imagekit.upload({
       file: file.buffer,
       fileName: file.originalname || "uploaded.pdf",
-      // folder: "/bus-routes", // optional: uncomment to organize in a folder
     });
 
     const pdfUrl = uploadResponse?.url;
 
-    // 2) Parse PDF directly from buffer (more reliable on serverless)
     const routes = await parseBusPdf(file.buffer, file.originalname || "uploaded.pdf");
 
     if (!Array.isArray(routes) || routes.length === 0) {
@@ -81,9 +71,9 @@ export const listUploads = async (req, res) => {
   }
 };
 
-/*
-  Get all unique locations for dropdown (scans stops from all routes in DB)
-*/
+
+//  Get all unique locations for dropdown (scans stops from all routes in DB)
+
 export const getLocations = async (req, res) => {
   try {
     const routes = await BusRoute.find({}, { stops: 1 });

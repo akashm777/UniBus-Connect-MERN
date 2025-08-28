@@ -10,11 +10,6 @@ import {
 
 const router = express.Router();
 
-/**
- * Multer in-memory storage (serverless-friendly)
- * - Restrict to PDFs
- * - Friendly size limit (adjust if needed)
- */
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
