@@ -1,10 +1,9 @@
 import axios from "axios";
 
-const RAW = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const API_URL = (/^https?:\/\//i.test(RAW) ? RAW : `http://${RAW}`).replace(/\/+$/, "");
+axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
 export const register = async ({ name, email, password }) => {
-  const res = await axios.post(`${API_URL}/api/auth/register`, {
+  const res = await axios.post(`/api/auth/register`, {
     name: (name || "").trim(),
     email: (email || "").trim().toLowerCase(),
     password,
@@ -13,7 +12,7 @@ export const register = async ({ name, email, password }) => {
 };
 
 export const login = async ({ email, password }) => {
-  const res = await axios.post(`${API_URL}/api/auth/login`, {
+  const res = await axios.post(`/api/auth/login`, {
     email: (email || "").trim().toLowerCase(),
     password,
   });
