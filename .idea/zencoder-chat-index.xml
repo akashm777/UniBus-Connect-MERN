@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ai.zencoder.plugin.chat.index">
+    <option name="activeChatId" value="f64653bc-dcfc-4828-b782-69b5805239bf" />
+    <option name="chatMetadata" value="{&quot;f64653bc-dcfc-4828-b782-69b5805239bf&quot;:{&quot;id&quot;:&quot;f64653bc-dcfc-4828-b782-69b5805239bf&quot;,&quot;title&quot;:&quot;Admin Upload Display Fix&quot;,&quot;createdAt&quot;:1756388940646,&quot;updatedAt&quot;:1756389484007,&quot;isAgent&quot;:true,&quot;isNameGenerated&quot;:true,&quot;messageCount&quot;:6,&quot;lastMessagePreview&quot;:&quot;**Diagnosing the upload button issue**\n\nI need to figure out why the upload button isn't working. It...&quot;}}" />
+  </component>
+</project>
