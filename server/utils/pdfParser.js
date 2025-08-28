@@ -267,7 +267,7 @@ export async function parseBusPdf(buffer, fileName = "") {
     const { default: pdfParse } = await import("pdf-parse");
     textContent = (await pdfParse(new Uint8Array(buffer))).text;
   } catch {
-    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.node.js");
     const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise;
     let agg = "";
     for (let i = 1; i <= pdf.numPages; i++) {
