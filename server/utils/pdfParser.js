@@ -262,21 +262,12 @@ function parseStopsFromBlock(blockText) {
 
 
 export async function parseBusPdf(buffer, fileName = "") {
-  let textContent = "";
-  try {
-    const { default: pdfParse } = await import("pdf-parse");
-    textContent = (await pdfParse(new Uint8Array(buffer))).text;
-  } catch {
-    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.node.js");
-    const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise;
-    let agg = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      agg += content.items.map(it => it.str || "").join(" ") + "\n";
-    }
-    textContent = agg;
-  }
+  // Import the internal implementation directly to avoid index.js sample file logic
+  const mod = await import("pdf-parse/lib/pdf-parse.js");
+  const pdfParse = mod.default || mod; // support both ESM default and CJS
+  const data = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  const result = await pdfParse(data);
+  const textContent = result.text;
 
   if (!textContent.trim()) throw new Error("Empty PDF text");
 
